@@ -1,0 +1,14 @@
+- hosts: localhost
+  become: no
+  gather_facts: no
+
+  vars:
+    install_talosctl: false
+    download_talosiso: false
+
+
+  roles:
+    - { role: install-talos, when: install_talosctl and download_talosiso }
+    - { role: deploy-talos-k8s-cluster }       
+
+

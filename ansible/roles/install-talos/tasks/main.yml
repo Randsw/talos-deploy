@@ -1,0 +1,19 @@
+- name: Get playbook executor username
+  become: false
+  local_action: command whoami
+  register: playbook_executor_username
+  changed_when: false
+
+- name: Dowload talosctl
+  ansible.builtin.get_url:
+    url: https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talosctl-linux-amd64
+    dest: /usr/local/bin/talosctl
+    mode: '0444'
+  when: install_talosctl
+
+- name: Dowload talos ISO file
+  ansible.builtin.get_url:
+    url: https://github.com/siderolabs/talos/releases/download/{{ talosctl_version }}/talos-amd64.iso
+    dest: /home/{{ playbook_executor_username }}/talos-amd64.iso
+    mode: '0444'
+  when: download_talosiso

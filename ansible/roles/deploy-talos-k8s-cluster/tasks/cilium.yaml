@@ -1,0 +1,15 @@
+- name: Add stable chart repo
+  kubernetes.core.helm_repository:
+    name: stable
+    repo_url: "https://helm.cilium.io"
+
+
+- name: Deploy latest version of Grafana chart inside monitoring namespace with values
+  kubernetes.core.helm:
+    name: cilium
+    chart_ref: cilium/cilium
+    release_namespace: kube-system
+    chart_version: "{{ cilium_chart_version }}"
+    values:
+      ipam:
+        mode: kubernetes
