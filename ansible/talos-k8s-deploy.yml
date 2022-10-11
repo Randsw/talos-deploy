@@ -8,7 +8,7 @@
 
 
   roles:
-    - { role: install-talos, when: install_talosctl and download_talosiso }
+    - { role: install-talos, when: install_talosctl or download_talosiso }
     - { role: deploy-talos-k8s-cluster }       
 
 
