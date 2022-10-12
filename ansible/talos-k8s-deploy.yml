@@ -4,11 +4,9 @@
 
   vars:
     install_talosctl: false
-    download_talosiso: false
-
 
   roles:
-    - { role: install-talos, when: install_talosctl or download_talosiso }
+    - { role: install-talosctl, when: install_talosctl }
     - { role: deploy-talos-k8s-cluster }       
 
 
