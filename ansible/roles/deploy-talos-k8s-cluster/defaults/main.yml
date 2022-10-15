@@ -1,3 +1,5 @@
 K8s_API_VIP: 192.168.121.100
-install_cillium: false
+install_cillium: true
 cilium_chart_version: "1.11.2"
+cluster_name: talos-cluster
+node_num: 6

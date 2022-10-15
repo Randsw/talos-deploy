@@ -2,9 +2,6 @@
   become: no
   gather_facts: no
 
-  vars:
-    install_talosctl: false
-
   roles:
     - { role: install-talosctl, when: install_talosctl }
     - { role: deploy-talos-k8s-cluster }       

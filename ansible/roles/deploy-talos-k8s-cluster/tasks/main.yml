@@ -18,11 +18,11 @@
         loop_var: vms
 
     - name: Generate machine config
-      ansible.builtin.command: talosctl gen config my-cluster https://{{ K8s_API_VIP }}:6443 --install-disk /dev/vda
+      ansible.builtin.command: talosctl gen config {{ cluster_name }} https://{{ K8s_API_VIP }}:6443 --install-disk /dev/vda
       when: not install_cillium
 
     - name: Generate machine config and skip CNI installation
-      ansible.builtin.command: talosctl gen config my-cluster https://{{ K8s_API_VIP }}:6443 --install-disk /dev/vda --config-patch '[{"op"{{':'}} "add", "path"{{':'}} "/cluster/network/cni", "value"{{':'}} {"name"{{':'}} "none"}}]'
+      ansible.builtin.command: talosctl gen config {{ cluster_name }} https://{{ K8s_API_VIP }}:6443 --install-disk /dev/vda --config-patch '[{"op"{{':'}} "add", "path"{{':'}} "/cluster/network/cni", "value"{{':'}} {"name"{{':'}} "none"}}]'
       when: install_cillium 
 
     - name: Add the virtual IP you picked to a network interface
@@ -30,21 +30,22 @@
         path: controlplane.yaml  
         insertafter: '    network: {}'
         block: |2
-                  interfaces:
-                    - interface: eth0
-                      dhcp: true
-                      vip:
-                        ip: 192.168.121.100'
+                interfaces:
+                  - interface: eth0
+                    dhcp: true
+                    vip:
+                      ip: 192.168.121.100
+
     - name: Make network dict not empty
       ansible.builtin.lineinfile:
         path: controlplane.yaml  
         search_string: '    network: {}'
         line: '    network:'
 
-    # - name: Apply the configuration to the initial control plane node
-    #   ansible.builtin.command: talosctl -n {{ item.value }} apply-config --insecure --file controlplane.yaml
-    #   loop: "{{ vms_info | dict2items }}"
-    #   when: '"talos_control-plane-node-1" in item.key'
+    - name: Apply the configuration to the initial control plane node
+      ansible.builtin.command: talosctl -n {{ item.value }} apply-config --insecure --file controlplane.yaml
+      loop: "{{ vms_info | dict2items }}"
+      when: '"talos_control-plane-node-1" in item.key'
 
     - name: Create string with vms ips
       set_fact:
@@ -53,20 +54,46 @@
     - name: Generated talosconfig and configure its endpoints
       ansible.builtin.shell: export TALOSCONFIG=$(realpath ./talosconfig) && talosctl config endpoint {{ ip_string }}
 
-    # - name: Bootstrap cluster
-    #   ansible.builtin.command: talosctl -n {{ item.value }} bootstrap
-    #   loop: "{{ vms_info | dict2items }}"
-    #   when: '"talos_control-plane-node-1" in item.key'
+    - name: Wait for node is ready
+      command: tail /tmp/control-plane-node-1.log
+      retries: 10
+      delay: 10
+      register: result
+      until: "'etcd is waiting to join the cluster' in result.stdout"
+      become: true
 
-    # - name: Apply the machine configurations to the control nodes
-    #   ansible.builtin.command: talosctl -n {{ item.value}} apply-config --insecure --file controlplane.yaml
-    #   loop: "{{ vms_info | dict2items }}"
-    #   when: '"control" in item.key'
+    - name: Bootstrap cluster
+      ansible.builtin.shell: export TALOSCONFIG=$(realpath ./talosconfig) && talosctl -n {{ item.value }} bootstrap
+      loop: "{{ vms_info | dict2items }}"
+      when: '"talos_control-plane-node-1" in item.key'
 
-    # - name: Apply the machine configurations to the worker nodes
-    #   ansible.builtin.command: talosctl -n {{ item.value}} apply-config --insecure --file worker.yaml
-    #   loop: "{{ vms_info | dict2items }}"
-    #   when: '"worker" in item.key'
+    - name: Apply the machine configurations to the control nodes
+      ansible.builtin.command: talosctl -n {{ item.value}} apply-config --insecure --file controlplane.yaml
+      loop: "{{ vms_info | dict2items }}"
+      when: "'control' in item.key and 'control-plane-node-1' not in item.key" 
+
+    - name: Apply the machine configurations to the worker nodes
+      ansible.builtin.command: talosctl -n {{ item.value}} apply-config --insecure --file worker.yaml
+      loop: "{{ vms_info | dict2items }}"
+      when: '"worker" in item.key'
+
+    - name: Wait for cluster deployed
+      ansible.builtin.shell: export TALOSCONFIG=$(realpath ./talosconfig) && talosctl -n {{ item.value }} get members
+      loop: "{{ vms_info | dict2items }}"
+      when: '"talos_control-plane-node-1" in item.key'
+      retries: 50
+      delay: 10
+      register: result
+      until: result.stdout_lines | length == node_num + 1
+
+    - name: Get kubeconfig
+      ansible.builtin.shell: export TALOSCONFIG=$(realpath ./talosconfig) && talosctl -n {{ item.value }} kubeconfig ./kubeconfig
+      loop: "{{ vms_info | dict2items }}"
+      when: '"talos_control-plane-node-1" in item.key'
+      retries: 50
+      delay: 5
+      register: result
+      until: result.rc == 0
 
     - name: Install Cilium if needed
       ansible.builtin.include_tasks: "cilium.yaml"

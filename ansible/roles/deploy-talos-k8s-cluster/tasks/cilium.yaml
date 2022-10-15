@@ -1,8 +1,10 @@
 - name: Add stable chart repo
   kubernetes.core.helm_repository:
-    name: stable
+    name: cilium
     repo_url: "https://helm.cilium.io"
 
+- name: Update helm repo
+  ansible.builtin.command: helm repo update
 
 - name: Deploy latest version of Grafana chart inside monitoring namespace with values
   kubernetes.core.helm:
@@ -10,6 +12,7 @@
     chart_ref: cilium/cilium
     release_namespace: kube-system
     chart_version: "{{ cilium_chart_version }}"
+    kubeconfig: ./kubeconfig
     values:
       ipam:
         mode: kubernetes
