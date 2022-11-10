@@ -10,7 +10,7 @@ Vagrant.configure("2") do |config|
           domain.memory = 2048
           domain.serial :type => "file", :source => {:path => "/tmp/control-plane-node-#{i}.log"}
           domain.storage :file, :device => :cdrom, :path => "/home/rand/work/k8s/talos/talos-amd64.iso"
-          domain.storage :file, :size => '4G', :type => 'raw'
+          domain.storage :file, :size => '20G', :type => 'raw'
           domain.boot 'hd'
           domain.boot 'cdrom'
         end
@@ -23,7 +23,7 @@ Vagrant.configure("2") do |config|
           domain.memory = 2048
           domain.serial :type => "file", :source => {:path => "/tmp/worker-node-#{i-$k8s_worker_num}.log"}
           domain.storage :file, :device => :cdrom, :path => "/home/rand/work/k8s/talos/talos-amd64.iso"
-          domain.storage :file, :size => '4G', :type => 'raw'
+          domain.storage :file, :size => '40G', :type => 'raw'
           domain.boot 'hd'
           domain.boot 'cdrom'
         end

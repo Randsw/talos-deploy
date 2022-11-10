@@ -4,3 +4,4 @@ worker.yaml
 kubeconfig
 talosconfig
 talos-amd64.iso
+*.pem
